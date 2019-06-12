@@ -1,0 +1,38 @@
+version: 2.1
+
+orbs:
+  vpn: mgmorbs/vpn@0.1.0
+
+commands:
+  okta-assumerole-tool:
+    description: Installing AWS Okta Assume Role
+    steps:
+      - run:
+          name: Installing AWS Okta Assume Role
+          command: |
+              mkdir ~/.okta
+              PREFIX=~/.okta bash <(curl -fsSL https://raw.githubusercontent.com/oktadeveloper/okta-aws-cli-assume-role/v2.0.0/bin/install.sh) -i
+              curl -LO https://github.com/oktadeveloper/okta-aws-cli-assume-role/releases/download/v2.0.0/okta-aws-cli-2.0.0.jar
+              mv okta-aws-cli-2.0.0.jar ~/.okta/
+              rm -rf ~/.okta/okta-aws-cli.jar
+              cd ~/.okta/
+              ln -s okta-aws-cli-2.0.0.jar okta-aws-cli.jar
+              rm -rf ~/.okta/config.properties
+              echo "OKTA_ORG=mgmresorts.okta.com
+                    OKTA_AWS_APP_URL=$CI_OKTA_AWS_APP_URL
+                    OKTA_USERNAME=$CI_OKTA_USERNAME
+                    OKTA_PASSWORD_CMD=echo $CI_OKTA_PASSWORD_CMD
+                    OKTA_PROFILE=eb-profile
+                    OKTA_AWS_REGION=us-west-2
+                    OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_ROLE_ARN" >> ~/.okta/config.properties
+                export PATH=~/.okta/bin/:$PATH
+                source ~/.okta/bash_functions
+                okta-aws eb-profile sts get-caller-identity
+                aws elasticbeanstalk describe-environments  --region=us-west-2 --profile=eb-profile   
+
+
+jobs:
+  install-okta-tool-cli:
+    executor: vpn/aws
+    steps:
+      - okta-assumerole-tool
