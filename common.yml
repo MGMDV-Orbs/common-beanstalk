@@ -9,6 +9,8 @@ commands:
     parameters:
       prod-branch-pattern:
         type: string
+      profile-name:
+        type: string
     steps:
       - run:
           name: Installing AWS Okta Assume Role
@@ -35,7 +37,7 @@ commands:
               fi      
               export PATH=~/.okta/bin/:$PATH
               source ~/.okta/bash_functions
-              okta-aws eb-profile sts get-caller-identity
+              okta-aws \<< parameters.profile-name >> sts get-caller-identity
 
   install-awscli:
     description: Installing aws cli and eb cli
@@ -164,3 +166,4 @@ jobs:
     steps:
       - okta-assumerole-tool:
           prod-branch-pattern: "none"
+          profile-name: "eb-profile"
