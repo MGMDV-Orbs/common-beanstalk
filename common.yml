@@ -142,7 +142,19 @@ commands:
           command: |-
             mvn clean install -Dskip.unit.tests=<< parameters.skip-unit-tests >>  -Dskip.integration.tests=<< parameters.skip-integration-tests >>
 
-
+  configure-git-for-commits:
+    description: Configure Git for commits
+    parameters:
+      user-email:
+        type: string
+      user-name:
+        type: string
+    steps:
+    - run:
+        name: Configure Git for commits
+        command: |-
+          git config --global user.email << parameters.user-email >>
+          git config --global user.name << parameters.user-name >>
 jobs:
   install-okta-tool-cli:
     executor: vpn/aws
