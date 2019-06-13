@@ -6,6 +6,9 @@ orbs:
 commands:
   okta-assumerole-tool:
     description: Installing AWS Okta Assume Role
+    parameters:
+      prod-branch-pattern:
+        type: string
     steps:
       - run:
           name: Installing AWS Okta Assume Role
@@ -24,7 +27,7 @@ commands:
                   OKTA_PASSWORD_CMD=echo $CI_OKTA_PASSWORD_CMD
                   OKTA_PROFILE=eb-profile
                   OKTA_AWS_REGION=us-west-2" >> ~/.okta/config.properties
-              if [[ $CIRCLE_BRANCH == prod*  ]]; then
+              if [[ $CIRCLE_BRANCH == \<< parameters.prod-branch-pattern >>  ]]; then
                   echo "Assuming Okta Production Role..."    
                   echo "OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_PROD_ROLE_ARN" >> ~/.okta/config.properties    
               else
@@ -159,4 +162,5 @@ jobs:
   install-okta-tool-cli:
     executor: vpn/aws
     steps:
-      - okta-assumerole-tool
+      - okta-assumerole-tool:
+          prod-branch-pattern: "none"
