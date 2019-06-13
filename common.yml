@@ -10,25 +10,100 @@ commands:
       - run:
           name: Installing AWS Okta Assume Role
           command: |
-              mkdir ~/.okta
-              PREFIX=~/.okta bash <(curl -fsSL https://raw.githubusercontent.com/oktadeveloper/okta-aws-cli-assume-role/v2.0.0/bin/install.sh) -i
-              curl -LO https://github.com/oktadeveloper/okta-aws-cli-assume-role/releases/download/v2.0.0/okta-aws-cli-2.0.0.jar
-              mv okta-aws-cli-2.0.0.jar ~/.okta/
-              rm -rf ~/.okta/okta-aws-cli.jar
-              cd ~/.okta/
-              ln -s okta-aws-cli-2.0.0.jar okta-aws-cli.jar
-              rm -rf ~/.okta/config.properties
-              echo "OKTA_ORG=mgmresorts.okta.com
-                    OKTA_AWS_APP_URL=$CI_OKTA_AWS_APP_URL
-                    OKTA_USERNAME=$CI_OKTA_USERNAME
-                    OKTA_PASSWORD_CMD=echo $CI_OKTA_PASSWORD_CMD
-                    OKTA_PROFILE=eb-profile
-                    OKTA_AWS_REGION=us-west-2
-                    OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_ROLE_ARN" >> ~/.okta/config.properties
-                export PATH=~/.okta/bin/:$PATH
-                source ~/.okta/bash_functions
-                okta-aws eb-profile sts get-caller-identity
-                aws elasticbeanstalk describe-environments  --region=us-west-2 --profile=eb-profile   
+            mkdir ~/.okta
+            PREFIX=~/.okta bash <(curl -fsSL https://raw.githubusercontent.com/oktadeveloper/okta-aws-cli-assume-role/v2.0.0/bin/install.sh) -i
+            curl -LO https://github.com/oktadeveloper/okta-aws-cli-assume-role/releases/download/v2.0.0/okta-aws-cli-2.0.0.jar
+            mv okta-aws-cli-2.0.0.jar ~/.okta/
+            rm -rf ~/.okta/okta-aws-cli.jar
+            cd ~/.okta/
+            ln -s okta-aws-cli-2.0.0.jar okta-aws-cli.jar
+            rm -rf ~/.okta/config.properties
+            echo "OKTA_ORG=mgmresorts.okta.com
+                  OKTA_AWS_APP_URL=$CI_OKTA_AWS_APP_URL
+                  OKTA_USERNAME=$CI_OKTA_USERNAME
+                  OKTA_PASSWORD_CMD=echo $CI_OKTA_PASSWORD_CMD
+                  OKTA_PROFILE=eb-profile
+                  OKTA_AWS_REGION=us-west-2" >> ~/.okta/config.properties
+              if [[ $CIRCLE_BRANCH == prod*  ]]; then
+                  echo "Assuming Okta Production Role..."    
+                  echo "OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_PROD_ROLE_ARN" >> ~/.okta/config.properties    
+              else
+                  echo "OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_ROLE_ARN" >> ~/.okta/config.properties    
+              fi      
+              export PATH=~/.okta/bin/:$PATH
+              source ~/.okta/bash_functions
+              okta-aws eb-profile sts get-caller-identity
+              aws elasticbeanstalk describe-environments  --region=us-west-2 --profile=eb-profile
+
+  install-awscli:
+    description: Installing aws cli and eb cli
+    parameters:
+      install-eb-cli:
+        default: false
+        type: boolean
+    steps:
+      - run:
+          name: Installing aws cli and eb cli
+          command: |
+            sudo apt-get -y -qq update
+            sudo apt-get install python-pip python-dev build-essential
+            sudo pip install awscli
+            <<# parameters.install-eb-cli >> sudo pip install awsebcli --upgrade <</ parameters.install-eb-cli >>
+
+  run-sonar:
+    description: Run Sonar checks
+    parameters:
+      scripts-full-path:
+        type: string
+    steps:
+      - run:
+          name: Run Sonar checks
+          command: |
+              mvn sonar:sonar \
+                -Dsonar.host.url=$SONAR_HOST \
+                -Dsonar.projectName=$SONAR_PROJECT \
+                -Dsonar.projectKey=$SONAR_PROJECT \
+                -Dsonar.projectVersion=$CIRCLE_BRANCH \
+                -Dsonar.java.source=$SONAR_JAVA_SOURCE \
+                -Dsonar.java.libraries=$SONAR_JAVA_LIB \
+                -Dsonar.java.binaries=target/classes
+                
+              chmod +x << parameters.scripts-full-path >>
+              bash << parameters.scripts-full-path >>
+
+  find-and-store-test-results:
+    description: Find, Copy and Store Unit/Integration results for insights.
+    steps:
+      - run:
+          name: Save test results
+          command: |-
+            mkdir -p ~/test-results/junit/
+            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/test-results/junit/ \;
+
+      - store_test_results:
+          path: ~/test-results
+
+      - store_artifacts:
+          path: ~/test-results/junit
+
+  restore-and-save-cache-with-mvn-dependencies:
+    description: Restore and Save cache with Maven Depedencies
+    parameters:
+      cache-key-name:
+        type: string
+    steps:
+      - restore_cache:
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+      - run:
+          name: Fetch Maven Dependencies going offline
+          command: |-
+            mvn dependency:go-offline
+      - save_cache: 
+          paths:
+              - ~/.m2
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+
+
 
 
 jobs:
