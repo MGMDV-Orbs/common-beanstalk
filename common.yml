@@ -46,8 +46,8 @@ commands:
           command: |
             sudo apt-get -y -qq update
             sudo apt-get install python-pip python-dev build-essential
-            sudo pip install awscli
-            <<# parameters.install-eb-cli >> sudo pip install awsebcli --upgrade <</ parameters.install-eb-cli >>
+            sudo -H pip install awscli
+            <<# parameters.install-eb-cli >> sudo -H pip install awsebcli --upgrade <</ parameters.install-eb-cli >>
 
   run-sonar:
     description: Run Sonar checks
