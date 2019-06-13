@@ -104,7 +104,29 @@ commands:
           key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
 
 
+  restore-cache-get-mvn-dependencies:
+    description: Restore and Save cache with Maven Depedencies
+    parameters:
+      cache-key-name:
+        type: string
+    steps:
+      - restore_cache:
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+      - run:
+          name: Fetch Maven Dependencies going offline
+          command: |-
+            mvn dependency:go-offline
 
+  save-cache-with-key:        
+    description: Save cache with a given key
+    parameters:
+      cache-key-name:
+        type: string
+    steps:
+      - save_cache: 
+          paths:
+              - ~/.m2
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
 
 jobs:
   install-okta-tool-cli:
