@@ -33,7 +33,6 @@ commands:
               export PATH=~/.okta/bin/:$PATH
               source ~/.okta/bash_functions
               okta-aws eb-profile sts get-caller-identity
-              aws elasticbeanstalk describe-environments  --region=us-west-2 --profile=eb-profile
 
   install-awscli:
     description: Installing aws cli and eb cli
@@ -127,6 +126,22 @@ commands:
           paths:
               - ~/.m2
           key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+
+  run-maven-install:        
+    description: Run Maven Clean and Install
+    parameters:
+      skip-unit-tests:
+        default: false
+        type: boolean
+      skip-integration-tests:
+        default: false
+        type: boolean
+    steps:
+      - run:
+          name: Run Maven Clean and Install
+          command: |-
+            mvn clean install -Dskip.unit.tests=<< parameters.skip-unit-tests >>  -Dskip.integration.tests=<< parameters.skip-integration-tests >>
+
 
 jobs:
   install-okta-tool-cli:
