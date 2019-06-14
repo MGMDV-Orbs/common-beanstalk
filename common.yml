@@ -27,7 +27,6 @@ commands:
                   OKTA_AWS_APP_URL=$CI_OKTA_AWS_APP_URL
                   OKTA_USERNAME=$CI_OKTA_USERNAME
                   OKTA_PASSWORD_CMD=echo $CI_OKTA_PASSWORD_CMD
-                  OKTA_PROFILE="\<< parameters.profile-name >>"
                   OKTA_AWS_REGION=us-west-2" >> ~/.okta/config.properties
               if [[ $CIRCLE_BRANCH == "\<< parameters.prod-branch-pattern >>"  ]]; then
                   echo "Assuming Okta Production Role..."    
@@ -37,7 +36,7 @@ commands:
               fi      
               export PATH=~/.okta/bin/:$PATH
               source ~/.okta/bash_functions
-              okta-aws "\<< parameters.profile-name >>" sts get-caller-identity
+              okta-aws << parameters.profile-name >> sts get-caller-identity
 
   install-awscli:
     description: Installing aws cli and eb cli
