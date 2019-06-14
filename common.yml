@@ -131,6 +131,19 @@ commands:
               - ~/.m2
           key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
 
+  save-cache-with-key-and-sonar:        
+    description: Save cache with a given key
+    parameters:
+      cache-key-name:
+        type: string
+    steps:
+      - save_cache: 
+          paths:
+              - ~/.m2
+              - ~/.sonar/cache
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+                    
+          
   run-maven-install:        
     description: Run Maven Clean and Install
     parameters:
@@ -145,6 +158,28 @@ commands:
           name: Run Maven Clean and Install
           command: |-
             mvn clean install -Dskip.unit.tests=<< parameters.skip-unit-tests >>  -Dskip.integration.tests=<< parameters.skip-integration-tests >>
+
+  run-maven-package:        
+    description: Run Maven Clean,Package and copy to target folder
+    parameters:
+      skip-unit-tests:
+        default: false
+        type: boolean
+      skip-integration-tests:
+        default: false
+        type: boolean
+      artifact-jar-name:
+        type: string
+      target-directory-to-copy:
+        type: string
+    steps:
+      - run:
+          name: Run Maven Clean,Package and copy to target folder
+          command: |-
+              mvn package -Dskip.unit.tests=<< parameters.skip-unit-tests >>  -Dskip.integration.tests=<< parameters.skip-integration-tests >>
+              mkdir  << parameters.target-directory-to-copy >>
+              cp ./target/<< parameters.artifact-jar-name >>.jar  << parameters.target-directory-to-copy >>
+
 
   configure-git-for-commits:
     description: Configure Git for commits
