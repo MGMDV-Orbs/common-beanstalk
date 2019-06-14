@@ -194,6 +194,25 @@ commands:
         command: |-
           git config --global user.email << parameters.user-email >>
           git config --global user.name << parameters.user-name >>
+
+  create-eb-artifact:
+    description: Creates an deploy ready Elastic Beanstalk Artifact
+    parameters:
+      artifacts-path:
+        type: string
+      package-script-path:
+        type: string
+
+    steps:
+      - run:
+          name: echo workspace
+          command: ls -ltr << parameters.artifacts-path >>/*
+      - run:
+          name: Build an Elastic Beanstalk Artifact
+          command: |
+            chmod +x << parameters.package-script-path >>
+            bash << parameters.package-script-path >>
+
 jobs:
   install-okta-tool-cli:
     executor: vpn/aws
