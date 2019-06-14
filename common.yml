@@ -213,6 +213,18 @@ commands:
             chmod +x << parameters.package-script-path >>
             bash << parameters.package-script-path >>
 
+  execute-script:
+    description: Executes given bash script
+    parameters:
+      file-path:
+        type: string
+    steps:
+      - run:
+          name: Executes given bash script
+          command: |
+            chmod +x << parameters.file-path >>
+            bash << parameters.file-path >>            
+
 jobs:
   install-okta-tool-cli:
     executor: vpn/aws
