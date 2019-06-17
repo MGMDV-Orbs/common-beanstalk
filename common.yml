@@ -76,12 +76,15 @@ commands:
 
   find-and-store-test-results:
     description: Find, Copy and Store Unit/Integration results for insights.
+    parameters:
+      reports-type:
+        type: string
     steps:
       - run:
           name: Save test results
           command: |-
             mkdir -p ~/test-results/junit/
-            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/test-results/junit/ \;
+            find . -type f -regex ".*/target/<< parameters.reports-type >>/.*xml" -exec cp {} ~/test-results/junit/ \;
 
       - store_test_results:
           path: ~/test-results
