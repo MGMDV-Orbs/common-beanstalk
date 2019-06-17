@@ -85,7 +85,7 @@ commands:
           command: |-
             mkdir -p ~/test-results/junit/
             find . -type f -regex ".*/target/<< parameters.reports-type >>/.*xml" -exec cp {} ~/test-results/junit/ \;
-
+          when: always
       - store_test_results:
           path: ~/test-results
 
@@ -217,7 +217,7 @@ commands:
             bash << parameters.package-script-path >>
 
   execute-script:
-    description: Executes given bash script
+    description: Executes given bash script - 
     parameters:
       file-path:
         type: string
@@ -227,6 +227,19 @@ commands:
           command: |
             chmod +x << parameters.file-path >>
             bash << parameters.file-path >>            
+
+  run-sleep-routine:
+    description: Sleep << parameters.purpose >>
+    parameters:
+      time-in-secs:
+        type: string
+      purpose:
+        type: string        
+    steps:
+      - run:
+          name:  Sleep << parameters.purpose >>
+          command: |
+              echo "Start.."; sleep  $(( << parameters.time-in-secs >> + 0 )) ; echo "End..";
 
 jobs:
   install-okta-tool-cli:
