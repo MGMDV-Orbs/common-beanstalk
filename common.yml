@@ -198,32 +198,16 @@ commands:
           git config --global user.email << parameters.user-email >>
           git config --global user.name << parameters.user-name >>
 
-  create-eb-artifact:
-    description: Creates an deploy ready Elastic Beanstalk Artifact
-    parameters:
-      artifacts-path:
-        type: string
-      package-script-path:
-        type: string
-
-    steps:
-      - run:
-          name: echo workspace
-          command: ls -ltr << parameters.artifacts-path >>/*
-      - run:
-          name: Build an Elastic Beanstalk Artifact
-          command: |
-            chmod +x << parameters.package-script-path >>
-            bash << parameters.package-script-path >>
-
   execute-script:
-    description: Executes given bash script - 
+    description: Executes given bash script for << parameters.purpose >>
     parameters:
       file-path:
         type: string
+      purpose:
+        type: string        
     steps:
       - run:
-          name: Executes given bash script
+          name: Executes given bash script for << parameters.purpose >>
           command: |
             chmod +x << parameters.file-path >>
             bash << parameters.file-path >>            
@@ -239,6 +223,7 @@ commands:
       - run:
           name:  Sleep << parameters.purpose >>
           command: |
+              echo "Sleeping for << parameters.time-in-secs >> secs"
               echo "Start.."; sleep  $(( << parameters.time-in-secs >> + 0 )) ; echo "End..";
 
 jobs:
