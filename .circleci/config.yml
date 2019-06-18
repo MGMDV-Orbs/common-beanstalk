@@ -46,9 +46,9 @@ workflows:
           requires:
               - validate-orb
 
-  prod-orb-publish-workflow: # workflow for the prod orb validate and publish process
-    jobs:
-      - publish-as-prod-orb:
-          filters: *prod-filter
-          requires:
-              - validate-orb
+  # prod-orb-publish-workflow: # workflow for the prod orb validate and publish process
+  #   jobs:
+  #     - publish-as-prod-orb:
+  #         filters: *prod-filter
+  #         requires:
+  #             - validate-orb
