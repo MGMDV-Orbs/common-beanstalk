@@ -26,7 +26,10 @@ jobs:
       - run:
           name: "Publish development version of orb"
           command: |
-            circleci orb publish common.yml mgmorbs/common-beanstalk@dev:0.1 --token $API_TOKEN
+            DEV-VERSION-STR=$(grep "dev-version" version.txt)
+            IFS="="  read -ra DEV-VERSION <<< "${DEV-VERSION-STR}"
+            echo ${DEV-VERSION[1]}
+#            circleci orb publish common.yml mgmorbs/common-beanstalk@dev:$DEV-VERSION --token $API_TOKEN
   publish-as-prod-orb:
     docker:
       - image: circleci/circleci-cli:latest
@@ -35,7 +38,7 @@ jobs:
       - run:
           name: "Publish production version of orb"
           command: |
-            circleci orb publish common.yml mgmorbs/common-beanstalk@1.0 --token $API_TOKEN             
+#            circleci orb publish common.yml mgmorbs/common-beanstalk@1.0 --token $API_TOKEN             
 
 workflows:
   version: 2
