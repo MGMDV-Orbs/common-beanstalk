@@ -1,0 +1,53 @@
+version: 2.1
+
+common-values:
+  - &build-filter
+    branches:
+      only:
+        - develop
+  - &prod-filter
+    branches:
+      only:
+        - master
+jobs:
+  validate-orb:
+    docker:
+      - image: circleci/circleci-cli:latest
+    steps:
+      - checkout
+      - run: circleci orb validate ./common.yml
+      - run: circleci orb process ./common.yml
+  publish-as-dev-orb:
+    docker:
+      - image: circleci/circleci-cli:latest
+    steps:
+      - checkout
+      - run:
+          name: "Publish development version of orb"
+          command: |
+            circleci orb publish common.yml mgmorbs/common-beanstalk@dev:0.1 --token $API_TOKEN
+  publish-as-prod-orb:
+    docker:
+      - image: circleci/circleci-cli:latest
+    steps:
+      - checkout
+      - run:
+          name: "Publish production version of orb"
+          command: |
+            circleci orb publish common.yml mgmorbs/common-beanstalk@1.0 --token $API_TOKEN             
+
+workflows:
+  version: 2
+  dev-orb-publish-workflow: # workflow for the dev orb validate and publish process. This runs regardless of branches.
+    jobs:
+      - publish-as-dev-orb:
+          filters: *build-filter
+          requires:
+              - validate-orb
+
+  prod-orb-publish-workflow: # workflow for the prod orb validate and publish process
+    jobs:
+      - publish-as-prod-orb:
+          filters: *prod-filter
+          requires:
+              - validate-orb
