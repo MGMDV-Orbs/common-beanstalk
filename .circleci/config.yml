@@ -41,7 +41,7 @@ workflows:
   version: 2
   dev-orb-publish-workflow: # workflow for the dev orb validate and publish process. This runs regardless of branches.
     jobs:
-      - validate-orb
+      - validate-orb:
           filters: *build-filter
       - publish-as-dev-orb:
           filters: *build-filter
@@ -50,7 +50,7 @@ workflows:
 
   prod-orb-publish-workflow: # workflow for the prod orb validate and publish process
     jobs:
-      - validate-orb
+      - validate-orb:
           filters: *prod-filter
       - publish-as-prod-orb:
           filters: *prod-filter
