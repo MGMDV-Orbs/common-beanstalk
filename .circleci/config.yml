@@ -26,8 +26,9 @@ jobs:
       - run:
           name: "Publish development version of orb"
           command: |
-            chmod +x ~/project/scripts/get-version.sh
-            bash ~/project/scripts/get-version.sh      
+         MATCHSTR="$(grep "dev-version" ~/project/version.txt)"
+         IFS="="  read -ra DEVVERSION <<< "${MATCHSTR}"
+         echo ${DEV-VERSION[1]} 
 #            circleci orb publish common.yml mgmorbs/common-beanstalk@dev:$DEV-VERSION --token $API_TOKEN
   publish-as-prod-orb:
     docker:
