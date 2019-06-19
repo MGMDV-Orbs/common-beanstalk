@@ -29,7 +29,7 @@ jobs:
               MATCHSTR=$(grep "dev-version" ~/project/version.txt)
               IFS="="  read -ra DEVVERSION \<<< "${MATCHSTR}"
               echo ${DEVVERSION[1]} 
-#            circleci orb publish common.yml mgmorbs/common-beanstalk@dev:$DEV-VERSION --token $API_TOKEN
+              circleci orb publish common.yml mgmorbs/common-beanstalk@dev:${DEVVERSION[1]} --token $API_TOKEN
   publish-as-prod-orb:
     docker:
       - image: circleci/circleci-cli:latest
@@ -38,7 +38,10 @@ jobs:
       - run:
           name: "Publish production version of orb"
           command: |
-#            circleci orb publish common.yml mgmorbs/common-beanstalk@1.0 --token $API_TOKEN             
+              MATCHSTR=$(grep "prod-version" ~/project/version.txt)
+              IFS="="  read -ra PRODVERSION \<<< "${MATCHSTR}"
+              echo ${PRODVERSION[1]} 
+              circleci orb publish common.yml mgmorbs/common-beanstalk@${PRODVERSION[1]} --token $API_TOKEN             
 
 workflows:
   version: 2
