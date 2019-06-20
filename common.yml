@@ -2,6 +2,7 @@ version: 2.1
 
 orbs:
   vpn: mgmorbs/vpn@0.1.0
+  slack: circleci/slack@2.4
 
 commands:
   okta-assumerole-tool:
@@ -225,6 +226,24 @@ commands:
           command: |
               echo "Sleeping for << parameters.time-in-secs >> secs"
               echo "Start.."; sleep  $(( << parameters.time-in-secs >> + 0 )) ; echo "End..";
+
+  send-slack-notif:
+    description: Sending Slack Notification
+    parameters:
+      color:
+        type: string
+        default: '#2eb886'
+      message:
+        type: string  
+        default: 'Sanity testing complete for branch - $CIRCLE_BRANCH'
+      footer:
+        type: string        
+
+    steps:
+      - slack/notify:
+          color: << parameters.color >>
+          message: << parameters.message >>
+          footer: << parameters.footer >>
 
 jobs:
   install-okta-tool-cli:
