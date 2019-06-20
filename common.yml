@@ -237,11 +237,15 @@ commands:
         type: string  
         default: 'Sanity testing complete for branch - $CIRCLE_BRANCH'
       footer:
-        type: string        
+        type: string     
+      title:      
+        type: string  
+        default: ""
 
     steps:
       - slack/notify:
           color: << parameters.color >>
+          title: << parameters.title >>
           message: << parameters.message >>
           footer: << parameters.footer >>
 
