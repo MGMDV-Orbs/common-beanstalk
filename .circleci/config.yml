@@ -1,0 +1,70 @@
+version: 2.1
+
+# Circle Ci configuration file
+common-values:
+  - &build-filter
+    branches:
+      only:
+        - develop
+  - &prod-filter
+    branches:
+      only:
+        - master
+jobs:
+  validate-orb:
+    docker:
+      - image: circleci/circleci-cli:latest
+    steps:
+      - checkout
+      - run: circleci orb validate ./common.yml
+      - run: circleci orb process ./common.yml
+  publish-as-dev-orb:
+    docker:
+      - image: circleci/circleci-cli:latest
+    steps:
+      - checkout
+      - run:
+          name: "Publish development version of orb"
+          command: |
+              MATCHSTR=$(grep "dev-version" ~/project/version.txt)
+              IFS="="  read -ra DEVVERSION \<<< "${MATCHSTR}"
+              echo ${DEVVERSION[1]} 
+              circleci orb publish common.yml mgmorbs/common-beanstalk@dev:${DEVVERSION[1]} --token $API_TOKEN
+#              circleci orb publish increment common.yml mgmorbs/common-beanstalk minor --token $API_TOKEN
+  publish-as-prod-orb:
+    docker:
+      - image: circleci/circleci-cli:latest
+    steps:
+      - checkout
+      - run:
+          name: "Publish production version of orb"
+          command: |
+              # MATCHSTR=$(grep "prod-version" ~/project/version.txt)
+              # IFS="="  read -ra PRODVERSION \<<< "${MATCHSTR}"
+              # echo ${PRODVERSION[1]} 
+              circleci orb publish increment common.yml mgmorbs/common-beanstalk minor --token $API_TOKEN             
+
+workflows:
+  version: 2
+  dev-orb-publish-workflow: # workflow for the dev orb validate and publish process. This runs regardless of branches.
+    jobs:
+      - validate-orb:
+          filters: *build-filter
+      - publish-as-dev-orb:
+          filters: *build-filter
+          requires:
+              - validate-orb
+
+  prod-orb-publish-workflow: # workflow for the prod orb validate and publish process
+    jobs:
+      - validate-orb:
+          filters: *prod-filter
+      - wait-for-approval: # Requires Approval only for the Production Releases
+          type: approval
+          filters: *prod-filter
+          requires:
+              - validate-orb
+      - publish-as-prod-orb:
+          filters: *prod-filter
+          requires:
+              - wait-for-approval

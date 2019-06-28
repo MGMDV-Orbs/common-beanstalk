@@ -1,0 +1,259 @@
+version: 2.1
+
+orbs:
+  vpn: mgmorbs/vpn@0.1.0
+  slack: circleci/slack@2.4
+
+commands:
+  okta-assumerole-tool:
+    description: Installing AWS Okta Assume Role
+    parameters:
+      prod-branch-pattern:
+        type: string
+      profile-name:
+        type: string
+    steps:
+      - run:
+          name: Installing AWS Okta Assume Role
+          command: |
+            mkdir ~/.okta
+            PREFIX=~/.okta bash <(curl -fsSL https://raw.githubusercontent.com/oktadeveloper/okta-aws-cli-assume-role/v2.0.0/bin/install.sh) -i
+            curl -LO https://github.com/oktadeveloper/okta-aws-cli-assume-role/releases/download/v2.0.0/okta-aws-cli-2.0.0.jar
+            mv okta-aws-cli-2.0.0.jar ~/.okta/
+            rm -rf ~/.okta/okta-aws-cli.jar
+            cd ~/.okta/
+            ln -s okta-aws-cli-2.0.0.jar okta-aws-cli.jar
+            rm -rf ~/.okta/config.properties
+            echo "OKTA_ORG=mgmresorts.okta.com
+                  OKTA_AWS_APP_URL=$CI_OKTA_AWS_APP_URL
+                  OKTA_USERNAME=$CI_OKTA_USERNAME
+                  OKTA_PASSWORD_CMD=echo $CI_OKTA_PASSWORD_CMD
+                  OKTA_AWS_REGION=us-west-2" >> ~/.okta/config.properties
+              if [[ $CIRCLE_BRANCH == "<<parameters.prod-branch-pattern>>"  ]]; then
+                  echo "Assuming Okta Production Role..."    
+                  echo "OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_PROD_ROLE_ARN" >> ~/.okta/config.properties    
+              else
+                  echo "OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_ROLE_ARN" >> ~/.okta/config.properties    
+              fi      
+              export PATH=~/.okta/bin/:$PATH
+              source ~/.okta/bash_functions
+              okta-aws << parameters.profile-name >> sts get-caller-identity
+
+  install-awscli:
+    description: Installing aws cli and eb cli
+    parameters:
+      install-eb-cli:
+        default: false
+        type: boolean
+    steps:
+      - run:
+          name: Installing aws cli and eb cli
+          command: |
+            sudo killall -9 apt-get || true
+            sudo apt-get -y -qq update
+            sudo apt-get install python-pip python-dev build-essential
+            sudo -H pip install awscli
+            <<# parameters.install-eb-cli >> sudo -H pip install awsebcli --upgrade <</ parameters.install-eb-cli >>
+
+  run-sonar:
+    description: Run Sonar checks
+    parameters:
+      scripts-full-path:
+        type: string
+    steps:
+      - run:
+          name: Run Sonar checks
+          command: |
+              mvn sonar:sonar \
+                -Dsonar.host.url=$SONAR_HOST \
+                -Dsonar.projectName=$SONAR_PROJECT \
+                -Dsonar.projectKey=$SONAR_PROJECT \
+                -Dsonar.projectVersion=$CIRCLE_BRANCH \
+                -Dsonar.java.source=$SONAR_JAVA_SOURCE \
+                -Dsonar.java.libraries=$SONAR_JAVA_LIB \
+                -Dsonar.java.binaries=target/classes
+                
+              chmod +x << parameters.scripts-full-path >>
+              bash << parameters.scripts-full-path >>
+
+  find-and-store-test-results:
+    description: Find, Copy and Store Unit/Integration results for insights.
+    parameters:
+      reports-type:
+        type: string
+    steps:
+      - run:
+          name: Save test results
+          command: |-
+            mkdir -p ~/test-results/junit/
+            find . -type f -regex ".*/target/<< parameters.reports-type >>/.*xml" -exec cp {} ~/test-results/junit/ \;
+          when: always
+      - store_test_results:
+          path: ~/test-results
+
+      - store_artifacts:
+          path: ~/test-results/junit
+
+  restore-and-save-cache-with-mvn-dependencies:
+    description: Restore and Save cache with Maven Depedencies
+    parameters:
+      cache-key-name:
+        type: string
+    steps:
+      - restore_cache:
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+      - run:
+          name: Fetch Maven Dependencies going offline
+          command: |-
+            mvn dependency:go-offline
+      - save_cache: 
+          paths:
+              - ~/.m2
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+
+
+  restore-cache-get-mvn-dependencies:
+    description: Restore and Save cache with Maven Depedencies
+    parameters:
+      cache-key-name:
+        type: string
+    steps:
+      - restore_cache:
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+      - run:
+          name: Fetch Maven Dependencies going offline
+          command: |-
+            mvn dependency:go-offline
+
+  save-cache-with-key:        
+    description: Save cache with a given key
+    parameters:
+      cache-key-name:
+        type: string
+    steps:
+      - save_cache: 
+          paths:
+              - ~/.m2
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+
+  save-cache-with-key-and-sonar:        
+    description: Save cache with a given key
+    parameters:
+      cache-key-name:
+        type: string
+    steps:
+      - save_cache: 
+          paths:
+              - ~/.m2
+              - ~/.sonar/cache
+          key: << parameters.cache-key-name >>-{{ .Branch }}-{{ checksum "pom.xml" }}
+                    
+          
+  run-maven-install:        
+    description: Run Maven Clean and Install
+    parameters:
+      skip-unit-tests:
+        default: false
+        type: boolean
+      skip-integration-tests:
+        default: false
+        type: boolean
+    steps:
+      - run:
+          name: Run Maven Clean and Install
+          command: |-
+            mvn clean install -Dskip.unit.tests=<< parameters.skip-unit-tests >>  -Dskip.integration.tests=<< parameters.skip-integration-tests >>
+
+  run-maven-package:        
+    description: Run Maven Clean,Package and copy to target folder
+    parameters:
+      skip-unit-tests:
+        default: false
+        type: boolean
+      skip-integration-tests:
+        default: false
+        type: boolean
+      artifact-jar-name:
+        type: string
+      target-directory-to-copy:
+        type: string
+    steps:
+      - run:
+          name: Run Maven Clean,Package and copy to target folder
+          command: |-
+              mvn package -Dskip.unit.tests=<< parameters.skip-unit-tests >>  -Dskip.integration.tests=<< parameters.skip-integration-tests >>
+              mkdir  << parameters.target-directory-to-copy >>
+              cp ./target/<< parameters.artifact-jar-name >>.jar  << parameters.target-directory-to-copy >>
+
+
+  configure-git-for-commits:
+    description: Configure Git for commits
+    parameters:
+      user-email:
+        type: string
+      user-name:
+        type: string
+    steps:
+    - run:
+        name: Configure Git for commits
+        command: |-
+          git config --global user.email << parameters.user-email >>
+          git config --global user.name << parameters.user-name >>
+
+  execute-script:
+    description: Executes given bash script for << parameters.purpose >>
+    parameters:
+      file-path:
+        type: string
+      purpose:
+        type: string        
+    steps:
+      - run:
+          name: Executes given bash script for << parameters.purpose >>
+          command: |
+            chmod +x << parameters.file-path >>
+            bash << parameters.file-path >>            
+
+  run-sleep-routine:
+    description: Sleep << parameters.purpose >>
+    parameters:
+      time-in-secs:
+        type: string
+      purpose:
+        type: string        
+    steps:
+      - run:
+          name:  Sleep << parameters.purpose >>
+          command: |
+              echo "Sleeping for << parameters.time-in-secs >> secs"
+              echo "Start.."; sleep  $(( << parameters.time-in-secs >> + 0 )) ; echo "End..";
+
+  send-slack-notif:
+    description: Sending Slack Notification
+    parameters:
+      color:
+        type: string
+        default: '#2eb886'
+      message:
+        type: string  
+        default: 'Sanity testing complete for branch - $CIRCLE_BRANCH'
+      footer:
+        type: string     
+      title:      
+        type: string  
+        default: ""
+
+    steps:
+      - slack/notify:
+          color: << parameters.color >>
+          title: << parameters.title >>
+          message: << parameters.message >>
+          footer: << parameters.footer >>
+
+jobs:
+  install-okta-tool-cli:
+    executor: vpn/aws
+    steps:
+      - okta-assumerole-tool:
+          prod-branch-pattern: "none"
+          profile-name: "eb-profile"
