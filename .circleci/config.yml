@@ -5,11 +5,12 @@ common-values:
   - &build-filter
     branches:
       only:
-        - develop
+        - develop1
   - &prod-filter
     branches:
       only:
         - master
+        - develop
 jobs:
   validate-orb:
     docker:
@@ -42,7 +43,7 @@ jobs:
               MATCHSTR=$(grep "prod-version" ~/project/version.txt)
               IFS="="  read -ra PRODVERSION \<<< "${MATCHSTR}"
               echo ${PRODVERSION[1]} 
-              circleci orb publish increment common.yml mgmorbs/common-beanstalk minor --token $API_TOKEN             
+#              circleci orb publish increment common.yml mgmorbs/common-beanstalk minor --token $API_TOKEN             
 
 workflows:
   version: 2
@@ -59,7 +60,12 @@ workflows:
     jobs:
       - validate-orb:
           filters: *prod-filter
-      - publish-as-prod-orb:
+      - wait-for-approval: # Requires Approval only for the Production Releases
+          type: approval
           filters: *prod-filter
           requires:
               - validate-orb
+      - publish-as-prod-orb:
+          filters: *prod-filter
+          requires:
+              - wait-for-approval
