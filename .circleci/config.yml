@@ -42,7 +42,7 @@ jobs:
               MATCHSTR=$(grep "prod-version" ~/project/version.txt)
               IFS="="  read -ra PRODVERSION \<<< "${MATCHSTR}"
               echo ${PRODVERSION[1]} 
-              circleci orb publish common.yml mgmorbs/common-beanstalk@${PRODVERSION[1]} --token $API_TOKEN             
+              circleci orb publish increment common.yml mgmorbs/common-beanstalk minor --token $API_TOKEN             
 
 workflows:
   version: 2
