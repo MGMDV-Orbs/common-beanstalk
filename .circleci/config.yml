@@ -5,12 +5,11 @@ common-values:
   - &build-filter
     branches:
       only:
-        - develop1
+        - develop
   - &prod-filter
     branches:
       only:
         - master
-        - develop
 jobs:
   validate-orb:
     docker:
@@ -40,10 +39,10 @@ jobs:
       - run:
           name: "Publish production version of orb"
           command: |
-              MATCHSTR=$(grep "prod-version" ~/project/version.txt)
-              IFS="="  read -ra PRODVERSION \<<< "${MATCHSTR}"
-              echo ${PRODVERSION[1]} 
-#              circleci orb publish increment common.yml mgmorbs/common-beanstalk minor --token $API_TOKEN             
+              # MATCHSTR=$(grep "prod-version" ~/project/version.txt)
+              # IFS="="  read -ra PRODVERSION \<<< "${MATCHSTR}"
+              # echo ${PRODVERSION[1]} 
+              circleci orb publish increment common.yml mgmorbs/common-beanstalk minor --token $API_TOKEN             
 
 workflows:
   version: 2
