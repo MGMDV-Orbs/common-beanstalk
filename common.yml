@@ -49,6 +49,7 @@ commands:
       - run:
           name: Installing aws cli and eb cli
           command: |
+            sudo killall -9 apt-get || true
             sudo apt-get -y -qq update
             sudo apt-get install python-pip python-dev build-essential
             sudo -H pip install awscli
