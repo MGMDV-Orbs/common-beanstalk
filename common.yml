@@ -24,12 +24,13 @@ commands:
             cd ~/.okta/
             ln -s okta-aws-cli-2.0.0.jar okta-aws-cli.jar
             rm -rf ~/.okta/config.properties
+            BRANCH_REGEX="^(<<parameters.prod-branch-pattern>>)"
             echo "OKTA_ORG=mgmresorts.okta.com
                   OKTA_AWS_APP_URL=$CI_OKTA_AWS_APP_URL
                   OKTA_USERNAME=$CI_OKTA_USERNAME
                   OKTA_PASSWORD_CMD=echo $CI_OKTA_PASSWORD_CMD
                   OKTA_AWS_REGION=us-west-2" >> ~/.okta/config.properties
-              if [[ $CIRCLE_BRANCH == "<<parameters.prod-branch-pattern>>"  ]]; then
+              if [[ $CIRCLE_BRANCH =~ $BRANCH_REGEX ]]; then
                   echo "Assuming Okta Production Role..."    
                   echo "OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_PROD_ROLE_ARN" >> ~/.okta/config.properties    
               else
