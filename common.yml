@@ -24,12 +24,13 @@ commands:
             cd ~/.okta/
             ln -s okta-aws-cli-2.0.0.jar okta-aws-cli.jar
             rm -rf ~/.okta/config.properties
+            BRANCH_REGEX="^(<<parameters.prod-branch-pattern>>)"
             echo "OKTA_ORG=mgmresorts.okta.com
                   OKTA_AWS_APP_URL=$CI_OKTA_AWS_APP_URL
                   OKTA_USERNAME=$CI_OKTA_USERNAME
                   OKTA_PASSWORD_CMD=echo $CI_OKTA_PASSWORD_CMD
                   OKTA_AWS_REGION=us-west-2" >> ~/.okta/config.properties
-              if [[ $CIRCLE_BRANCH == "<<parameters.prod-branch-pattern>>"  ]]; then
+              if [[ $CIRCLE_BRANCH =~ $BRANCH_REGEX ]]; then
                   echo "Assuming Okta Production Role..."    
                   echo "OKTA_AWS_ROLE_TO_ASSUME=$CI_ASSUMED_PROD_ROLE_ARN" >> ~/.okta/config.properties    
               else
@@ -49,11 +50,13 @@ commands:
       - run:
           name: Installing aws cli and eb cli
           command: |
-            sudo killall -9 apt-get || true
-            sudo apt-get -y -qq update
-            sudo apt-get install python-pip python-dev build-essential
-            sudo -H pip install awscli
-            <<# parameters.install-eb-cli >> sudo -H pip install awsebcli --upgrade <</ parameters.install-eb-cli >>
+                  sudo killall -9 apt-get || true
+                  sudo rm /var/lib/dpkg/lock
+                  sudo dpkg --configure -a
+                  sudo apt-get update
+                  sudo apt-get install python-pip python-dev build-essential
+                  sudo -H pip install awscli
+                  <<# parameters.install-eb-cli >> sudo -H pip install awsebcli --upgrade <</ parameters.install-eb-cli >>
 
   run-sonar:
     description: Run Sonar checks
@@ -228,6 +231,27 @@ commands:
               echo "Sleeping for << parameters.time-in-secs >> secs"
               echo "Start.."; sleep  $(( << parameters.time-in-secs >> + 0 )) ; echo "End..";
 
+  push-to-s3:
+    description: Push to AWS S3 location
+    parameters:
+      source-spec-file-name:
+        type: string
+      target-spec-file-name:
+        type: string
+      content-type:
+        type: string
+      location:
+        type: string
+      profile-name:
+        type: string
+
+    steps:
+      - run:
+          name:  Push to AWS S3 location
+          command: |
+              echo "Pushing to AWS S3. File Name: << parameters.source-spec-file-name >>  Location: << parameters.location >>"
+              aws s3 cp << parameters.source-spec-file-name >> s3://<< parameters.location >>/<< parameters.target-spec-file-name >> --metadata-directive REPLACE --cache-control max-age=0,no-cache,no-store,must-revalidate --content-type << parameters.content-type >>  --acl public-read --profile << parameters.profile-name >>
+
   send-slack-notif:
     description: Sending Slack Notification
     parameters:
@@ -257,3 +281,40 @@ jobs:
       - okta-assumerole-tool:
           prod-branch-pattern: "none"
           profile-name: "eb-profile"
+
+  publish-spec-file:
+    executor: vpn/aws
+    description: Job to publish spec file to s3 location.
+    parameters:
+      profile-name:
+        type: string
+      source-file-name:        
+        type: string
+      target-file-name:
+        type: string
+      content-type:
+        type: string
+      location:
+        type: string
+        default: 'shared-services-api-swagger/test'
+
+    working_directory: ~/project
+    steps:
+      - vpn/with-vpn-connection:
+          after-vpn-steps:
+            - checkout
+            - install-awscli:
+                  install-eb-cli: false
+            - okta-assumerole-tool:
+                  prod-branch-pattern: "none"
+                  profile-name: << parameters.profile-name >>
+            - run:
+                name:  Change directory
+                command: |
+                    cd ~/project
+            - push-to-s3:
+                source-spec-file-name: << parameters.source-file-name >>      
+                target-spec-file-name: << parameters.target-file-name >>
+                content-type: << parameters.content-type >>       
+                location: << parameters.location >>
+                profile-name: << parameters.profile-name >>
