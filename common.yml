@@ -274,6 +274,7 @@ commands:
           message: << parameters.message >>
           footer: << parameters.footer >>
 
+
 jobs:
   install-okta-tool-cli:
     executor: vpn/aws
@@ -281,6 +282,27 @@ jobs:
       - okta-assumerole-tool:
           prod-branch-pattern: "none"
           profile-name: "eb-profile"
+
+  publish-apispecs-to-confluence:
+    executor: vpn/aws
+    description: Job to publish spec file to confluence location.
+    parameters:
+      profile-name:
+        type: string
+      script-filepath:        
+        type: string
+    steps:
+      - vpn/with-vpn-connection:
+          after-vpn-steps:
+            - checkout
+            - install-awscli:
+                  install-eb-cli: true
+            - okta-assumerole-tool:
+                  prod-branch-pattern: "none"
+                  profile-name: << parameters.profile-name >>
+            - execute-script:
+                file-path: << parameters.script-filepath >>
+                purpose: "Publish API Specification file to Confluence"                                
 
   publish-spec-file:
     executor: vpn/aws
