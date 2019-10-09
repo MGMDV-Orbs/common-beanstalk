@@ -1,10 +1,53 @@
 version: 2.1
 
 orbs:
-  vpn: mgmorbs/vpn@0.1.0
   slack: circleci/slack@2.4
 
 commands:
+
+  vpn-connection:
+    description: Connect to VPN
+    parameters:
+      sleep-delay:
+        type: integer
+        default: 5
+    steps:
+      - run:
+          name: Login to AWS ECR
+          command: |
+            $(aws ecr get-login --no-include-email --region us-west-2)
+
+      - run:
+          # TODO: This image is hosted on Sf AWS account and will need to be
+          # moved to MGM DV owned account
+          name: Pull OpenConnect Docker Image
+          command: |
+            docker pull $VPN_CONTAINER_REGISTRY_URL
+
+      - run:
+          name: Connect to VPN
+          command: |
+            CONTAINER=$(docker run \
+              --privileged \
+              -dt \
+              --name vpn \
+              --net host \
+              --add-host "$VPN_HOST:$VPN_SERVER" \
+              -e VPN_SERVER=$VPN_HOST \
+              -e VPN_USER=$VPN_USER \
+              -e VPN_PASSWORD=$VPN_PASSWORD \
+              $VPN_CONTAINER_REGISTRY_URL)
+
+      - run:
+          name: Sleep for VPN Connect
+          command: |
+            sleep <<parameters.sleep-delay>>
+
+      - run:
+          name: Verify VPN Connection
+          command: |
+            ping $VPN_GATEWAY_IP -c 5
+
   okta-assumerole-tool:
     description: Installing AWS Okta Assume Role
     parameters:
@@ -276,15 +319,9 @@ commands:
 
 
 jobs:
-  install-okta-tool-cli:
-    executor: vpn/aws
-    steps:
-      - okta-assumerole-tool:
-          prod-branch-pattern: "none"
-          profile-name: "eb-profile"
-
   publish-apispecs-to-confluence:
-    executor: vpn/aws
+    machine:
+      image: circleci/classic:201808-01
     description: Job to publish spec file to confluence location.
     parameters:
       profile-name:
@@ -292,51 +329,14 @@ jobs:
       script-filepath:        
         type: string
     steps:
-      - vpn/with-vpn-connection:
-          after-vpn-steps:
-            - checkout
-            - install-awscli:
-                  install-eb-cli: true
-            - okta-assumerole-tool:
-                  prod-branch-pattern: "none"
-                  profile-name: << parameters.profile-name >>
-            - execute-script:
-                file-path: << parameters.script-filepath >>
-                purpose: "Publish API Specification file to Confluence"                                
-
-  publish-spec-file:
-    executor: vpn/aws
-    description: Job to publish spec file to s3 location.
-    parameters:
-      profile-name:
-        type: string
-      source-file-name:        
-        type: string
-      target-file-name:
-        type: string
-      content-type:
-        type: string
-      location:
-        type: string
-        default: 'shared-services-api-swagger/test'
-
-    working_directory: ~/project
-    steps:
-      - vpn/with-vpn-connection:
-          after-vpn-steps:
-            - checkout
-            - install-awscli:
-                  install-eb-cli: false
-            - okta-assumerole-tool:
-                  prod-branch-pattern: "none"
-                  profile-name: << parameters.profile-name >>
-            - run:
-                name:  Change directory
-                command: |
-                    cd ~/project
-            - push-to-s3:
-                source-spec-file-name: << parameters.source-file-name >>      
-                target-spec-file-name: << parameters.target-file-name >>
-                content-type: << parameters.content-type >>       
-                location: << parameters.location >>
-                profile-name: << parameters.profile-name >>
+      - vpn-connection:
+          sleep-delay: 30
+      - checkout
+      - install-awscli:
+            install-eb-cli: true
+      - okta-assumerole-tool:
+            prod-branch-pattern: "none"
+            profile-name: << parameters.profile-name >>
+      - execute-script:
+          file-path: << parameters.script-filepath >>
+          purpose: "Publish API Specification file to Confluence"                                
