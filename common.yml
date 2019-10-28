@@ -321,7 +321,7 @@ commands:
 jobs:
   publish-apispecs-to-confluence:
     machine:
-      image: circleci/classic:201808-01
+      image: ubuntu-1604:201903-01
     description: Job to publish spec file to confluence location.
     parameters:
       profile-name:
