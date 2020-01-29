@@ -93,14 +93,17 @@ commands:
       - run:
           name: Installing aws cli and eb cli
           command: |
-                  sudo killall -9 apt-get || true
-                  sudo rm /var/lib/dpkg/lock
-                  sudo dpkg --configure -a
-                  sudo apt-get update
-                  sudo apt-get install python-pip python-dev build-essential
-                  sudo -H pip install awscli
-                  <<# parameters.install-eb-cli >> sudo -H pip install awsebcli --upgrade <</ parameters.install-eb-cli >>
-
+                  # sudo killall -9 apt-get || true
+                  # sudo rm /var/lib/dpkg/lock
+                  # sudo dpkg --configure -a
+                  # sudo apt-get update
+                  # sudo apt-get install python-pip python-dev build-essential
+                  # pip install awscli
+                  pyenv global 3.7.0
+                  pip install --upgrade pip
+                  pip --version
+                  <<# parameters.install-eb-cli >> pip install awsebcli --upgrade <</ parameters.install-eb-cli >>
+                  eb --version
   run-sonar:
     description: Run Sonar checks
     parameters:
