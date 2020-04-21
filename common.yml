@@ -321,6 +321,41 @@ commands:
           footer: << parameters.footer >>
 
 
+  publish-test-results-via-xray:
+    description: Publish all test results to Jira Xray
+    parameters:
+      test-results-directory:
+        type: string
+      test-plan-key:
+        type: string
+      test-env-key:
+        type: string
+    steps:
+      - run:
+          name: Upload JUnit test results to JIRA Xray
+          when: always
+          command: >
+            XRAY_AUTH_TOKEN=$(\
+              curl -s https://xray.cloud.xpand-it.com/api/v1/authenticate \
+                -H "Content-Type: application/json" -X POST \
+                --data "{ \"client_id\": \"$XRAY_CLIENT_ID\", \"client_secret\": \"$XRAY_CLIENT_SECRET\" }" \
+                | tr -d '"'
+            )
+
+            TEST_ENV=<< parameters.test-env-key >>
+              for file in `ls -1 << parameters.test-results-directory >>`;
+              do
+                  echo "<< parameters.test-results-directory >>/$file"
+                  cat "<< parameters.test-results-directory >>/$file" | \
+                  curl "https://xray.cloud.xpand-it.com/api/v1/import/execution/junit?projectKey=$PROJECT_KEY&testPlanKey=<< parameters.test-plan-key >>&testEnvironments=${!TEST_ENV}" \
+                    -H "Content-Type: text/xml" \
+                    -X POST \
+                    -H "Authorization: Bearer $XRAY_AUTH_TOKEN" \
+                    --data @"<< parameters.test-results-directory >>/$file"
+              done
+
+
+
 jobs:
   publish-apispecs-to-confluence:
     machine:
