@@ -336,7 +336,7 @@ commands:
           when: always
           command: >
             XRAY_AUTH_TOKEN=$(\
-              curl -s https://xray.cloud.xpand-it.com/api/v1/authenticate \
+              curl -s --insecure https://xray.cloud.xpand-it.com/api/v1/authenticate \
                 -H "Content-Type: application/json" -X POST \
                 --data "{ \"client_id\": \"$XRAY_CLIENT_ID\", \"client_secret\": \"$XRAY_CLIENT_SECRET\" }" \
                 | tr -d '"'
