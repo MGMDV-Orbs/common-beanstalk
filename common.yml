@@ -347,7 +347,7 @@ commands:
               do
                   echo "<< parameters.test-results-directory >>/$file"
                   cat "<< parameters.test-results-directory >>/$file" | \
-                  curl "https://xray.cloud.xpand-it.com/api/v1/import/execution/junit?projectKey=$PROJECT_KEY&testPlanKey=<< parameters.test-plan-key >>&testEnvironments=${!TEST_ENV}" \
+                  curl --insecure "https://xray.cloud.xpand-it.com/api/v1/import/execution/junit?projectKey=$PROJECT_KEY&testPlanKey=<< parameters.test-plan-key >>&testEnvironments=${!TEST_ENV}" \
                     -H "Content-Type: text/xml" \
                     -X POST \
                     -H "Authorization: Bearer $XRAY_AUTH_TOKEN" \
