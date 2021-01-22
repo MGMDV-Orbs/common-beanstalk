@@ -262,6 +262,7 @@ commands:
           command: |
             chmod +x << parameters.file-path >>
             bash << parameters.file-path >>            
+          no_output_timeout: 30m
 
   run-sleep-routine:
     description: Sleep << parameters.purpose >>
