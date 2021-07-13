@@ -344,7 +344,7 @@ commands:
             )
 
             TEST_ENV=<< parameters.test-env-key >>
-              for file in `ls -1 << parameters.test-results-directory >>`;
+              for file in `ls -1 << parameters.test-results-directory >>/TEST-*`;
               do
                   echo "<< parameters.test-results-directory >>/$file"
                   cat "<< parameters.test-results-directory >>/$file" | \
