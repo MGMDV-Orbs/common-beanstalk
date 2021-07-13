@@ -346,13 +346,13 @@ commands:
             TEST_ENV=<< parameters.test-env-key >>
               for file in `ls -1 << parameters.test-results-directory >>/TEST-*`;
               do
-                  echo "<< parameters.test-results-directory >>/$file"
-                  cat "<< parameters.test-results-directory >>/$file" | \
+                  echo "$file"
+                  cat "$file" | \
                   curl --insecure "https://xray.cloud.xpand-it.com/api/v1/import/execution/junit?projectKey=$PROJECT_KEY&testPlanKey=<< parameters.test-plan-key >>&testEnvironments=${!TEST_ENV}" \
                     -H "Content-Type: text/xml" \
                     -X POST \
                     -H "Authorization: Bearer $XRAY_AUTH_TOKEN" \
-                    --data @"<< parameters.test-results-directory >>/$file"
+                    --data @"$file"
               done
 
 
